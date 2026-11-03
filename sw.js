@@ -1,6 +1,6 @@
 const CACHE_NAME = 'vector-shell-v1';
 const APP_SHELL = [
-    './vector.html',
+    './index.html',
     './manifest.json',
     './icons/vector.svg',
     './about.html',
@@ -41,7 +41,7 @@ self.addEventListener('fetch', event => {
                     return response;
                 })
                 .catch(async () => (await caches.match(event.request)) ||
-                    (await caches.match('./vector.html')))
+                    (await caches.match('./index.html')))
         );
         return;
     }
@@ -64,14 +64,14 @@ self.addEventListener('push', event => {
     const options = {
         body: payload.body || 'আপনার এলাকার জন্য নতুন তথ্য যোগ হয়েছে।',
         icon: './icons/vector.svg',
-        data: { url: payload.url || './vector.html' }
+        data: { url: payload.url || './index.html' }
     };
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', event => {
     event.notification.close();
-    const targetUrl = new URL(event.notification.data?.url || './vector.html', self.location.href).href;
+    const targetUrl = new URL(event.notification.data?.url || './index.html', self.location.href).href;
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
             const existing = windowClients.find(client => client.url === targetUrl);

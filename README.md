@@ -25,7 +25,7 @@ Vector একটি mobile-first, community-driven ওয়েব অ্যাপ�
 ## Project Structure
 
 ```text
-vector.html          Main app: feed, map view, form, filters and app logic
+index.html           Main app: feed, map view, form, filters and app logic
 about.html           About page and creator profile
 terms.html           Usage terms and privacy notes
 tutorial.html        App usage guide
@@ -38,12 +38,12 @@ README.md            Project documentation
 
 ## Run Locally
 
-The app uses a service worker, which requires a secure context: HTTPS or `localhost`. Opening `vector.html` directly as a `file://` URL will not enable PWA installation or service-worker caching.
+The app uses a service worker, which requires a secure context: HTTPS or `localhost`. Opening `index.html` directly as a `file://` URL will not enable PWA installation or service-worker caching.
 
 For example, with the VS Code Live Server extension, serve the project root and open:
 
 ```text
-http://127.0.0.1:5500/vector.html
+http://127.0.0.1:5500/index.html
 ```
 
 No local package installation or build step is required. The app also uses external CDN/font services and remote Google Apps Script and Nominatim endpoints, so those online features require network access.

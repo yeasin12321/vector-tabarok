@@ -1,7 +1,7 @@
 {
   "name": "Vector - শুক্রবারের তাবাররুক ডিরেক্টরি",
   "short_name": "Vector",
-  "start_url": "./vector.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#064e3b",
