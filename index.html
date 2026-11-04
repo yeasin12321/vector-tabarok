@@ -15,6 +15,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS & JS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
         tailwind.config = {
@@ -45,6 +48,15 @@
         body {
             font-family: 'Hind Siliguri', 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 1rem;
+            padding: 4px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+        }
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            line-height: 1.4;
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
@@ -134,8 +146,8 @@
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex justify-center selection:bg-emerald-200">
 
-    <!-- Mobile-First App Wrapper (Centered Container) -->
-    <div class="w-full max-w-md bg-white min-h-screen shadow-2xl relative flex flex-col pb-24">
+    <!-- Responsive App Wrapper -->
+    <div class="w-full max-w-md md:max-w-5xl lg:max-w-7xl bg-white min-h-screen shadow-2xl relative flex flex-col pb-24 mx-auto transition-all md:px-6 lg:px-8">
 
         <!-- Header -->
         <header class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-teal-800 text-white pt-6 pb-5 px-5 rounded-b-3xl shadow-lg relative overflow-hidden">
@@ -265,35 +277,14 @@
         </div>
 
         <!-- Main Content Area: Mosque Cards List -->
-        <main id="mosqueListContainer" class="px-4 space-y-3 flex-1">
+        <main id="mosqueListContainer" class="px-4 md:px-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 content-start">
             <!-- Dynamically Rendered Mosque Cards will appear here -->
         </main>
 
-        <!-- Interactive Mock Map View (Hidden by default) -->
-        <section id="mapViewContainer" class="px-4 hidden flex-1">
-            <div class="bg-emerald-50/50 rounded-2xl border-2 border-dashed border-emerald-200 p-4 min-h-[350px] relative flex flex-col justify-between overflow-hidden shadow-inner">
-                <!-- Decorative simulated radar grid -->
-                <div class="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:16px_16px] opacity-20 pointer-events-none"></div>
-
-                <div class="relative z-10 flex justify-between items-center bg-white/90 backdrop-blur-sm p-2 rounded-xl shadow-sm border border-emerald-100">
-                    <div class="text-xs">
-                        <span class="font-bold text-emerald-800">রাডার ভিউ:</span>
-                        <span class="text-slate-600 ml-1">আপনার বর্তমান কেন্দ্রস্থল</span>
-                    </div>
-                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-medium">ব্যাসার্ধ ৩ কি.মি.</span>
-                </div>
-
-                <!-- Simulated Pins Container -->
-                <div id="mapPinsArea" class="relative w-full h-64 my-auto">
-                    <!-- Populated by JS -->
-                </div>
-
-                <div class="relative z-10 bg-white/95 backdrop-blur-sm p-3 rounded-xl shadow-md border border-slate-100 text-xs">
-                    <p class="font-semibold text-slate-700 flex items-center">
-                        <i class="fa-solid fa-circle-info text-emerald-600 mr-1.5"></i>
-                        ম্যাপের যেকোনো মসজিদে ট্যাপ করে তাবাররুকের বিবরণ দেখুন
-                    </p>
-                </div>
+        <!-- Real Interactive Map View -->
+        <section id="mapViewContainer" class="px-4 md:px-0 hidden flex-1 w-full">
+            <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-2 shadow-sm flex flex-col h-[500px] relative overflow-hidden">
+                <div id="liveMapArea" class="w-full h-full rounded-2xl z-10"></div>
             </div>
         </section>
 
@@ -310,7 +301,7 @@
         </div>
 
         <!-- Floating Bottom Action Bar & Navigation -->
-        <nav aria-label="প্রধান নেভিগেশন" class="fixed bottom-0 max-w-md w-full bg-white/95 backdrop-blur-md border-t border-slate-100 px-3 py-2 z-40 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <nav aria-label="প্রধান নেভিগেশন" class="fixed bottom-0 max-w-md md:max-w-5xl lg:max-w-7xl w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 px-4 md:px-16 lg:px-24 py-2.5 z-40 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.05)] left-1/2 -translate-x-1/2">
             <a href="index.html" aria-current="page" class="flex flex-col items-center text-emerald-700 w-14">
                 <i class="fa-solid fa-house text-base"></i>
                 <span class="text-[10px] font-bold mt-0.5">হোম</span>
@@ -641,6 +632,35 @@
         let mosquesData = [];
         let optimisticMosques = [];
         let isLoadingMosques = false;
+        let leafletMap = null;
+        let mapMarkersLayer = null;
+
+        const districtCoords = {
+            "সাতক্ষীরা": [22.7185, 89.0705],
+            "ঢাকা": [23.8103, 90.4125],
+            "গাজীপুর": [23.9999, 90.4203],
+            "নারায়ণগঞ্জ": [23.6238, 90.5000],
+            "মুন্সিগঞ্জ": [23.5422, 90.5305],
+            "মানিকগঞ্জ": [23.8617, 90.0003],
+            "চট্টগ্রাম": [22.3569, 91.7832],
+            "কক্সবাজার": [21.4272, 92.0058],
+            "কুমিল্লা": [23.4682, 91.1788],
+            "ফেনী": [23.0159, 91.3976],
+            "খুলনা": [22.8456, 89.5403],
+            "যশোর": [23.1664, 89.2081],
+            "বাগেরহাট": [22.6516, 89.7859],
+            "রাজশাহী": [24.3745, 88.6042],
+            "বগুড়া": [24.8465, 89.3777],
+            "পাবনা": [24.0064, 89.2372],
+            "সিলেট": [24.8949, 91.8687],
+            "মৌলভীবাজার": [24.4829, 91.7774],
+            "বরিশাল": [22.7010, 90.3535],
+            "পটুয়াখালী": [22.3596, 90.3299],
+            "রংপুর": [25.7439, 89.2752],
+            "দিনাজপুর": [25.6217, 88.6355],
+            "ময়মনসিংহ": [24.7471, 90.4203],
+            "জামালপুর": [24.9375, 89.9378]
+        };
 
         // Format Today's Date in Bengali
         function setBengaliDate() {
@@ -714,6 +734,13 @@
             const rawCoordinateLeft = getRecordValue(record, ['left', 'mapLeft']);
             const coordinateTop = Number(rawCoordinateTop);
             const coordinateLeft = Number(rawCoordinateLeft);
+            const rawLatitude = getRecordValue(record, ['latitude', 'lat']);
+            const rawLongitude = getRecordValue(record, ['longitude', 'lng', 'lon', 'long']);
+            const latitude = Number(rawLatitude);
+            const longitude = Number(rawLongitude);
+            const hasGeoCoordinates = rawLatitude !== '' && rawLongitude !== ''
+                && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90
+                && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
             const hasCoordinates = rawCoordinateTop !== '' && rawCoordinateLeft !== ''
                 && Number.isFinite(coordinateTop) && Number.isFinite(coordinateLeft)
                 && coordinateTop >= 0 && coordinateTop <= 100 && coordinateLeft >= 0 && coordinateLeft <= 100;
@@ -730,6 +757,8 @@
                 foodName,
                 category,
                 categoryIcon: getCategoryIcon(category),
+                lat: hasGeoCoordinates ? latitude : null,
+                lng: hasGeoCoordinates ? longitude : null,
                 time: String(getRecordValue(record, ['distributiontime', 'time', 'distribution', 'সময়'])).trim() || 'নামাজের পর',
                 sponsor: String(getRecordValue(record, ['sponsor', 'organizer', 'donor', 'আয়োজক'])).trim(),
                 quantity: String(getRecordValue(record, ['quantity', 'amount', 'পরিমাণ'])).trim() || 'সকলের জন্য',
@@ -749,7 +778,26 @@
             isLoadingMosques = true;
             const container = document.getElementById('mosqueListContainer');
             if (!silent) {
-                container.innerHTML = '<div class="py-8 text-center text-sm text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2 text-emerald-600"></i>শিটের তথ্য লোড হচ্ছে...</div>';
+                container.innerHTML = `
+                    <div class="col-span-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+                        ${[1, 2, 3].map(() => `
+                            <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700/60">
+                                <div class="flex justify-between items-center pb-2 mb-3 border-b border-slate-100 dark:border-slate-700/50">
+                                    <div class="h-4 w-28 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                                    <div class="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="h-5 w-48 bg-slate-200 dark:bg-slate-700 rounded-md"></div>
+                                    <div class="h-3 w-32 bg-slate-100 dark:bg-slate-700/50 rounded-md"></div>
+                                </div>
+                                <div class="mt-4 bg-slate-100 dark:bg-slate-700/40 p-3 rounded-xl flex items-center space-x-3">
+                                    <div class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700"></div>
+                                    <div class="h-4 w-36 bg-slate-200 dark:bg-slate-700 rounded-md"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
             }
             try {
                 const response = await fetch(API_URL);
@@ -960,41 +1008,123 @@
             }).join('');
         }
 
-        // Render Radar Map Pins
-        function renderMapPins() {
-            const pinsArea = document.getElementById('mapPinsArea');
-            const filtered = getFilteredMosques();
-            
-            pinsArea.innerHTML = `
-                <!-- Center User Pin -->
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-20 pointer-events-none">
-                    <span class="relative flex h-5 w-5">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-5 w-5 bg-emerald-600 border-2 border-white shadow-lg"></span>
-                    </span>
-                    <span class="text-[9px] font-bold bg-white/90 text-emerald-900 px-1.5 py-0.5 rounded shadow mt-1">আপনার স্থান</span>
-                </div>
-            `;
+        function getDistrictCoordinates(district) {
+            if (districtCoords[district]) return districtCoords[district];
 
-            filtered.forEach(m => {
-                const pin = document.createElement('div');
-                pin.className = 'absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition transform hover:scale-125 z-10';
-                pin.style.top = m.coordinates.top;
-                pin.style.left = m.coordinates.left;
-                
-                const pinBg = m.hasTabarukToday ? 'bg-amber-500' : 'bg-slate-400';
-                pin.innerHTML = `
-                    <div onclick="openMosqueDetail('${m.id}')" class="flex flex-col items-center group">
-                        <div class="w-8 h-8 rounded-full ${pinBg} text-white shadow-md flex items-center justify-center border-2 border-white">
-                            <span class="text-xs">${escapeHTML(m.categoryIcon || '🕌')}</span>
-                        </div>
-                        <div class="bg-slate-900 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap mt-1 max-w-[110px] truncate">
-                            ${escapeHTML(m.name)}
-                        </div>
-                    </div>
-                `;
-                pinsArea.appendChild(pin);
+            const normalize = value => String(value || '').toLowerCase().replace(/[\s'’.-]/g, '');
+            const normalizedDistrict = normalize(district);
+            const match = Object.entries(districtNameAliases).find(([name, aliases]) =>
+                aliases.some(alias => normalize(alias) === normalizedDistrict)
+            );
+            return districtCoords[match?.[0]] || districtCoords['সাতক্ষীরা'];
+        }
+
+        function createMapPopup(mosque) {
+            const content = document.createElement('div');
+            content.style.minWidth = '170px';
+            content.style.fontFamily = "'Hind Siliguri', sans-serif";
+
+            const category = document.createElement('span');
+            category.textContent = mosque.category || 'তাবাররুক';
+            category.style.cssText = 'font-size:10px;font-weight:bold;background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:9999px;';
+            content.appendChild(category);
+
+            const name = document.createElement('h4');
+            name.textContent = mosque.name;
+            name.style.cssText = 'margin:6px 0 2px;font-size:14px;font-weight:bold;color:#1e293b;';
+            content.appendChild(name);
+
+            const location = document.createElement('p');
+            location.textContent = `📍 ${mosque.area || mosque.district || ''}`;
+            location.style.cssText = 'margin:0;font-size:11px;color:#64748b;';
+            content.appendChild(location);
+
+            const food = document.createElement('div');
+            food.style.cssText = 'margin-top:8px;background:#fef3c7;border:1px solid #fde68a;padding:6px 8px;border-radius:8px;';
+            const foodLabel = document.createElement('span');
+            foodLabel.textContent = 'আজকের তাবাররুক:';
+            foodLabel.style.cssText = 'font-size:10px;color:#92400e;display:block;font-weight:600;';
+            const foodName = document.createElement('strong');
+            foodName.textContent = mosque.foodName || 'বিশেষ তাবাররুক';
+            foodName.style.cssText = 'font-size:12px;color:#78350f;';
+            food.append(foodLabel, foodName);
+            content.appendChild(food);
+
+            const details = document.createElement('div');
+            details.textContent = `⏰ ${mosque.time || 'নামাজের পর'} · ✅ ${mosque.confirmations || 0} জন নিশ্চিত`;
+            details.style.cssText = 'margin-top:6px;font-size:10px;color:#64748b;';
+            content.appendChild(details);
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = 'বিস্তারিত দেখুন';
+            button.style.cssText = 'margin-top:8px;width:100%;background:#047857;color:white;border:0;border-radius:6px;padding:5px 0;font-size:11px;font-weight:bold;cursor:pointer;';
+            button.addEventListener('click', () => openMosqueDetail(mosque.id));
+            content.appendChild(button);
+
+            return content;
+        }
+
+        function initOrUpdateMap() {
+            if (typeof L === 'undefined') {
+                showToast('ম্যাপ লোড করা যায়নি; ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।', 'fa-solid fa-triangle-exclamation');
+                return;
+            }
+
+            const filtered = getFilteredMosques();
+            const districtCenter = selectedDistrict ? districtCoords[selectedDistrict] : null;
+
+            if (!leafletMap) {
+                leafletMap = L.map('liveMapArea').setView(
+                    districtCenter || [23.6850, 90.3563],
+                    districtCenter ? 11 : 7
+                );
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(leafletMap);
+                mapMarkersLayer = L.layerGroup().addTo(leafletMap);
+            }
+
+            window.setTimeout(() => leafletMap.invalidateSize(), 200);
+            mapMarkersLayer.clearLayers();
+
+            const bounds = [];
+            filtered.forEach((mosque, index) => {
+                const hasCoordinates = Number.isFinite(mosque.lat) && Number.isFinite(mosque.lng);
+                const base = hasCoordinates ? [mosque.lat, mosque.lng] : getDistrictCoordinates(mosque.district);
+                const lat = hasCoordinates ? base[0] : base[0] + Math.sin(index * 2.3) * 0.012;
+                const lng = hasCoordinates ? base[1] : base[1] + Math.cos(index * 2.3) * 0.012;
+                const position = [lat, lng];
+                bounds.push(position);
+
+                const icon = L.divIcon({
+                    className: 'custom-leaflet-pin',
+                    html: `<div style="background-color:#047857;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 4px 10px rgba(0,0,0,0.3);font-size:15px;cursor:pointer;">${escapeHTML(mosque.categoryIcon || '🕌')}</div>`,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 34],
+                    popupAnchor: [0, -32]
+                });
+
+                mapMarkersLayer.addLayer(
+                    L.marker(position, { icon }).bindPopup(createMapPopup(mosque))
+                );
             });
+
+            if (districtCenter) {
+                leafletMap.setView(districtCenter, 11);
+            } else if (bounds.length > 0) {
+                leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+            } else {
+                leafletMap.setView([23.6850, 90.3563], 7);
+            }
+        }
+
+        function renderMapPins() {
+            const mapView = document.getElementById('mapViewContainer');
+            if (leafletMap && !mapView.classList.contains('hidden')) {
+                initOrUpdateMap();
+            }
         }
 
         // Search Handlers
@@ -1060,7 +1190,7 @@
                 mapBtn.classList.remove('text-slate-600');
                 listBtn.classList.remove('bg-white', 'text-emerald-800', 'shadow-sm');
                 listBtn.classList.add('text-slate-600');
-                renderMapPins();
+                initOrUpdateMap();
             }
         }
 
