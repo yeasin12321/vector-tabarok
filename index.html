@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vector - শুক্রবারের তাবাররুক ডিরেক্টরি</title>
+    <!-- Open Graph / Telegram, Facebook, WhatsApp Preview -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="ভেক্টর - Vector">
+    <meta property="og:title" content="ভেক্টর - Vector | শুক্রবারের তাবাররুক ডিরেক্টরি">
+    <meta property="og:description" content="জুম্মার নামাজের পর কোন মসজিদে কী তাবাররুক বিতরণ হচ্ছে তা সহজে খুঁজুন, নিশ্চিত করুন এবং সকলের সাথে শেয়ার করুন।">
+    <meta property="og:url" content="https://yeasin12321.github.io/vector-tabarok/">
+    <meta property="og:image" content="https://yeasin12321.github.io/vector-tabarok/icons/preview.png">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="2752">
+    <meta property="og:image:height" content="1536">
+
+    <!-- Twitter / Large Card preview -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ভেক্টর - Vector | শুক্রবারের তাবাররুক ডিরেক্টরি">
+    <meta name="twitter:description" content="জুম্মার নামাজের পর কোন মসজিদে কী তাবাররুক বিতরণ হচ্ছে তা সহজে খুঁজুন, নিশ্চিত করুন এবং সকলের সাথে শেয়ার করুন।">
+    <meta name="twitter:image" content="https://yeasin12321.github.io/vector-tabarok/icons/preview.png">
     <link rel="icon" href="./icons/vector.svg" type="image/svg+xml">
     <meta name="theme-color" content="#047857">
     <link rel="manifest" href="./manifest.json">
@@ -145,6 +161,13 @@
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex justify-center selection:bg-emerald-200">
+    <!-- Offline Notification Banner -->
+    <div id="offlineNotice" role="status" aria-live="polite" class="hidden fixed top-0 inset-x-0 z-50 bg-amber-500 text-slate-950 text-xs font-bold py-2 px-4 text-center shadow-md">
+        <span class="inline-flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-wifi-slash"></i>
+            <span>ইন্টারনেট সংযোগ বিচ্ছিন্ন! নতুন তথ্য আপডেট করা যাচ্ছে না।</span>
+        </span>
+    </div>
 
     <!-- Responsive App Wrapper -->
     <div class="w-full max-w-md md:max-w-5xl lg:max-w-7xl bg-white min-h-screen shadow-2xl relative flex flex-col pb-24 mx-auto transition-all md:px-6 lg:px-8">
@@ -225,15 +248,19 @@
 
         <!-- Search & Filter Controls -->
         <section class="px-4 -mt-3 z-20">
-            <!-- Search Input -->
-            <div class="bg-white rounded-2xl shadow-md p-1.5 border border-slate-100 flex items-center">
-                <div class="w-9 h-9 flex items-center justify-center text-emerald-600">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+            <!-- Search Input with Live Suggestions -->
+            <div class="relative">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-1.5 border border-slate-100 dark:border-slate-700 flex items-center">
+                    <div class="w-9 h-9 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <input type="text" id="searchInput" oninput="handleSearchInput(this.value)" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggestions" placeholder="মসজিদের নাম বা তাবাররুক খুঁজুন..." class="w-full text-sm outline-none px-2 text-slate-700 dark:text-slate-200 bg-transparent placeholder-slate-400 font-medium">
+                    <button onclick="clearSearch()" id="clearBtn" class="hidden text-slate-400 hover:text-slate-600 px-2 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
                 </div>
-                <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="মসজিদের নাম বা তাবাররুক খুঁজুন..." class="w-full text-sm outline-none px-2 text-slate-700 bg-transparent placeholder-slate-400 font-medium">
-                <button onclick="clearSearch()" id="clearBtn" class="hidden text-slate-400 hover:text-slate-600 px-2 text-xs">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+
+                <div id="searchSuggestions" role="listbox" aria-label="সার্চ সাজেশন" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 max-h-60 overflow-y-auto"></div>
             </div>
 
             <!-- Horizontal Category Chips -->
@@ -875,6 +902,94 @@
         }
 
         // Filter and Search Logic
+        function banglishToBangla(text) {
+            if (!text) return '';
+            let result = String(text).toLowerCase().trim();
+
+            const charMap = [
+                { en: 'sh', bn: 'শ' },
+                { en: 'th', bn: 'থ' },
+                { en: 'kh', bn: 'খ' },
+                { en: 'gh', bn: 'ঘ' },
+                { en: 'ch', bn: 'চ' },
+                { en: 'jh', bn: 'ঝ' },
+                { en: 'ph', bn: 'ফ' },
+                { en: 'bh', bn: 'ভ' },
+                { en: 'dh', bn: 'ঢ' },
+                { en: 'ng', bn: 'ং' },
+                { en: 'k', bn: 'ক' },
+                { en: 'g', bn: 'গ' },
+                { en: 'c', bn: 'ক' },
+                { en: 'j', bn: 'জ' },
+                { en: 'z', bn: 'জ' },
+                { en: 't', bn: 'ত' },
+                { en: 'd', bn: 'দ' },
+                { en: 'n', bn: 'ন' },
+                { en: 'p', bn: 'প' },
+                { en: 'f', bn: 'ফ' },
+                { en: 'b', bn: 'ব' },
+                { en: 'v', bn: 'ভ' },
+                { en: 'm', bn: 'ম' },
+                { en: 'r', bn: 'র' },
+                { en: 'l', bn: 'ল' },
+                { en: 's', bn: 'স' },
+                { en: 'h', bn: 'হ' },
+                { en: 'a', bn: 'া' },
+                { en: 'i', bn: 'ি' },
+                { en: 'u', bn: 'ু' },
+                { en: 'e', bn: 'ে' },
+                { en: 'o', bn: 'ো' }
+            ];
+
+            charMap.forEach(({ en, bn }) => {
+                result = result.split(en).join(bn);
+            });
+
+            const vowelMap = { 'া': 'আ', 'ি': 'ই', 'ু': 'উ', 'ে': 'এ', 'ো': 'ও' };
+            if (vowelMap[result[0]]) {
+                result = vowelMap[result[0]] + result.slice(1);
+            }
+            return result;
+        }
+
+        function getConsonantSkeleton(text) {
+            return String(text)
+                .toLowerCase()
+                .replace(/ক্ষ/g, 'খ')
+                .replace(/[ধঢ]/g, 'ঢ')
+                .replace(/[শষস]/g, 'স')
+                .replace(/[\u09BC-\u09CD\u0985-\u0994]/g, '')
+                .replace(/\s/g, '');
+        }
+
+        function isTextMatch(targetText, query) {
+            if (!targetText || !query) return false;
+            const target = String(targetText).toLowerCase();
+            const normalizedQuery = String(query).toLowerCase().trim();
+            if (target.includes(normalizedQuery)) return true;
+
+            const convertedBangla = banglishToBangla(normalizedQuery);
+            if (convertedBangla && target.includes(convertedBangla)) return true;
+
+            const targetConsonants = getConsonantSkeleton(target);
+            const queryConsonants = getConsonantSkeleton(convertedBangla);
+            if (!queryConsonants || queryConsonants.length < 2) return false;
+            if (targetConsonants.includes(queryConsonants)) return true;
+
+            let queryIndex = 0;
+            let skippedCharacters = 0;
+            for (const character of targetConsonants) {
+                if (character === queryConsonants[queryIndex]) {
+                    queryIndex++;
+                    if (queryIndex === queryConsonants.length) return skippedCharacters <= 1;
+                } else if (queryIndex > 0) {
+                    skippedCharacters++;
+                    if (skippedCharacters > 1) return false;
+                }
+            }
+            return false;
+        }
+
         function getFilteredMosques() {
             return mosquesData.filter(m => {
                 const district = String(m.district || '').toLowerCase();
@@ -892,18 +1007,23 @@
                 // Category filter
                 const matchesCategory = (currentCategory === 'all') || (m.category === currentCategory);
 
-                // Search query
-                const q = searchQuery.trim().toLowerCase();
+                // Search query supports Banglish, English, and Bangla
+                const q = searchQuery.trim();
                 const matchesSearch = !q || 
-                    m.name.toLowerCase().includes(q) || 
-                    m.foodName.toLowerCase().includes(q) || 
-                    m.area.toLowerCase().includes(q) || 
-                    m.landmark.toLowerCase().includes(q) ||
-                    m.district.toLowerCase().includes(q) ||
-                    m.category.toLowerCase().includes(q);
+                    isTextMatch(m.name, q) ||
+                    isTextMatch(m.foodName, q) ||
+                    isTextMatch(m.area, q) ||
+                    isTextMatch(m.landmark, q) ||
+                    isTextMatch(m.district, q) ||
+                    isTextMatch(m.category, q);
 
                 return matchesLocation && matchesCategory && matchesSearch;
             });
+        }
+
+        function isJummahLiveNow() {
+            const now = new Date();
+            return now.getDay() === 5 && now.getHours() >= 11 && now.getHours() < 14;
         }
 
         // Render Mosque Cards List
@@ -951,14 +1071,24 @@
                     `;
                 }
 
+                const isLiveActive = isJummahLiveNow() && m.hasTabarukToday;
                 return `
-                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 hover:shadow-md transition duration-200">
-                    <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-50">
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border ${isLiveActive ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-slate-100 dark:border-slate-700/60'} hover:shadow-md transition duration-200 relative overflow-hidden">
+                    ${isLiveActive ? `
+                    <div class="mb-2.5 flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-xl">
+                        <span class="flex items-center text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-ping"></span>
+                            আজকের লাইভ বিতরণ চলছে
+                        </span>
+                        <span class="text-[10px] bg-emerald-600 text-white font-semibold px-2 py-0.5 rounded-full">জুম্মা স্পেশাল</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-50 dark:border-slate-700/50">
                         <div class="flex items-center space-x-1.5">
                             <span class="text-base">${escapeHTML(m.categoryIcon || '🍲')}</span>
-                            <span class="text-xs font-bold text-emerald-800">${escapeHTML(m.category || 'তাবাররুক')}</span>
+                            <span class="text-xs font-bold text-emerald-800 dark:text-emerald-400">${escapeHTML(m.category || 'তাবাররুক')}</span>
                         </div>
-                        <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        <span class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-slate-700 px-2 py-0.5 rounded-full">
                             <i class="fa-regular fa-clock mr-1 text-[10px]"></i>${escapeHTML(m.time)}
                         </span>
                     </div>
@@ -966,39 +1096,39 @@
                     <div class="cursor-pointer" onclick="openMosqueDetail('${m.id}')">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="text-base font-bold text-slate-800 leading-tight">${escapeHTML(m.name)}</h3>
+                                <h3 class="text-base font-bold text-slate-800 dark:text-white leading-tight">${escapeHTML(m.name)}</h3>
                                 <p class="text-xs text-slate-400 mt-1 flex items-center">
                                     <i class="fa-solid fa-location-dot text-emerald-500 mr-1 text-[11px]"></i>
                                     ${escapeHTML([m.area, m.district].filter(Boolean).join(', '))}
                                 </p>
                             </div>
-                            <div class="w-7 h-7 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center">
+                            <div class="w-7 h-7 rounded-full bg-slate-50 dark:bg-slate-700 text-slate-400 flex items-center justify-center">
                                 <i class="fa-solid fa-chevron-right text-xs"></i>
                             </div>
                         </div>
 
-                        <div class="mt-3 flex items-center space-x-2 bg-slate-50/70 p-2.5 rounded-xl">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-100/60 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                        <div class="mt-3 flex items-center space-x-2 bg-slate-50/70 dark:bg-slate-700/40 p-2.5 rounded-xl">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-100/60 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
                                 <i class="fa-solid fa-bowl-rice text-sm"></i>
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-400 font-medium block">আজকের তাবাররুক:</span>
-                                <span class="text-sm font-bold text-slate-800">${escapeHTML(m.foodName)}</span>
+                                <span class="text-sm font-bold text-slate-800 dark:text-white">${escapeHTML(m.foodName)}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-3 pt-2.5 flex items-center justify-between text-xs border-t border-slate-50">
+                    <div class="mt-3 pt-2.5 flex items-center justify-between text-xs border-t border-slate-50 dark:border-slate-700/50">
                         <div class="flex items-center space-x-1 text-slate-400 text-[11px]">
                             <i class="fa-regular fa-circle-check text-emerald-500"></i>
                             <span>${escapeHTML(m.confirmations)} জন নিশ্চিত করেছেন</span>
                         </div>
                         <div class="flex items-center space-x-1.5">
-                            <button onclick="event.stopPropagation(); toggleConfirm('${m.id}')" class="px-2.5 py-1 rounded-lg ${m.userConfirmed ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-emerald-700 hover:bg-emerald-50'} font-semibold text-xs flex items-center space-x-1 transition">
+                            <button onclick="event.stopPropagation(); toggleConfirm('${m.id}')" class="px-2.5 py-1 rounded-lg ${m.userConfirmed ? 'bg-emerald-600 text-white' : 'bg-slate-50 dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50'} font-semibold text-xs flex items-center space-x-1 transition">
                                 <i class="fa-solid fa-thumbs-up text-[10px]"></i>
                                 <span>${m.userConfirmed ? 'নিশ্চিত' : 'সঠিক'}</span>
                             </button>
-                            <button onclick="event.stopPropagation(); shareMosque('${m.id}')" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-500 hover:text-emerald-700 flex items-center justify-center transition">
+                            <button onclick="event.stopPropagation(); shareMosque('${m.id}')" title="শেয়ার করুন" class="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-500 hover:text-emerald-700 flex items-center justify-center transition">
                                 <i class="fa-solid fa-share-nodes text-[11px]"></i>
                             </button>
                         </div>
@@ -1140,10 +1270,120 @@
             renderMapPins();
         }
 
+        function handleSearchInput(val) {
+            handleSearch(val);
+            renderSuggestions(val);
+        }
+
+        function renderSuggestions(val) {
+            const box = document.getElementById('searchSuggestions');
+            const query = val.trim();
+            if (!query) {
+                box.classList.add('hidden');
+                box.replaceChildren();
+                return;
+            }
+
+            const suggestions = new Map();
+            const addSuggestion = (text, type, icon) => {
+                if (!isTextMatch(text, query)) return;
+                const key = `${type}:${text.toLocaleLowerCase()}`;
+                if (!suggestions.has(key)) suggestions.set(key, { text, type, icon });
+            };
+
+            mosquesData.forEach(mosque => {
+                addSuggestion(mosque.name, 'মসজিদ', 'fa-mosque');
+                addSuggestion(mosque.foodName, 'খাবার', 'fa-bowl-rice');
+                addSuggestion(mosque.area, 'এলাকা', 'fa-location-dot');
+            });
+
+            const list = [...suggestions.values()].slice(0, 6);
+            if (!list.length) {
+                box.classList.add('hidden');
+                box.replaceChildren();
+                return;
+            }
+
+            box.replaceChildren(...list.map(item => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.setAttribute('role', 'option');
+                option.className = 'w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-emerald-50 dark:hover:bg-slate-700/60 cursor-pointer border-b border-slate-50 dark:border-slate-700/40 last:border-none transition text-left';
+
+                const label = document.createElement('span');
+                label.className = 'flex items-center space-x-2.5 text-xs text-slate-700 dark:text-slate-200 font-medium';
+                const icon = document.createElement('i');
+                icon.className = `fa-solid ${item.icon} text-emerald-600 dark:text-emerald-400 text-xs w-4 text-center`;
+                icon.setAttribute('aria-hidden', 'true');
+                const text = document.createElement('span');
+                appendHighlightedText(text, item.text, query);
+                label.append(icon, text);
+
+                const type = document.createElement('span');
+                type.className = 'text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md';
+                type.textContent = item.type;
+
+                option.append(label, type);
+                option.addEventListener('click', () => selectSuggestion(item.text));
+                return option;
+            }));
+            box.classList.remove('hidden');
+        }
+
+        function appendHighlightedText(container, text, query) {
+            const lowerText = text.toLowerCase();
+            const normalizedQuery = query.toLowerCase();
+            let matchText = normalizedQuery;
+            let matchIndex = lowerText.indexOf(matchText);
+            if (matchIndex === -1) {
+                matchText = banglishToBangla(query);
+                matchIndex = lowerText.indexOf(matchText);
+            }
+            if (matchIndex === -1) {
+                if (isTextMatch(text, query)) {
+                    const match = document.createElement('span');
+                    match.className = 'text-emerald-700 dark:text-emerald-400 font-bold';
+                    match.textContent = text;
+                    container.appendChild(match);
+                } else {
+                    container.textContent = text;
+                }
+                return;
+            }
+
+            container.append(document.createTextNode(text.slice(0, matchIndex)));
+            const match = document.createElement('span');
+            match.className = 'text-emerald-700 dark:text-emerald-400 font-bold';
+            match.textContent = text.slice(matchIndex, matchIndex + matchText.length);
+            container.append(match, document.createTextNode(text.slice(matchIndex + matchText.length)));
+        }
+
+        function selectSuggestion(text) {
+            const input = document.getElementById('searchInput');
+            input.value = text;
+            handleSearch(text);
+            document.getElementById('searchSuggestions').classList.add('hidden');
+        }
+
         function clearSearch() {
             document.getElementById('searchInput').value = '';
             handleSearch('');
+            document.getElementById('searchSuggestions').classList.add('hidden');
         }
+
+        document.addEventListener('click', event => {
+            const box = document.getElementById('searchSuggestions');
+            const input = document.getElementById('searchInput');
+            if (box && !box.contains(event.target) && event.target !== input) {
+                box.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('searchInput').addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                document.getElementById('searchSuggestions').classList.add('hidden');
+            }
+        });
 
         // Filter Handlers
         function setCategoryFilter(category) {
@@ -1544,21 +1784,50 @@
             document.getElementById('detailModal').classList.add('hidden');
         }
 
-        // Share Link Simulation
-        function shareMosque(id) {
+        async function shareMosque(id) {
             const m = mosquesData.find(item => item.id === id);
             if (!m) return;
-            const textToCopy = `আজ জুম্মায় ${m.name}-এ তাবাররুক হিসেবে দেওয়া হচ্ছে "${m.foodName}"! বিস্তারিত জানতে Vector অ্যাপ দেখুন।`;
-            
-            // Clipboard copy with fallback
-            const dummy = document.createElement("input");
-            document.body.appendChild(dummy);
-            dummy.value = textToCopy;
-            dummy.select();
-            document.execCommand("copy");
-            document.body.removeChild(dummy);
 
-            showToast('মেসেজ ক্লিপবোর্ডে কপি করা হয়েছে! মেসেঞ্জারে শেয়ার করুন।', 'fa-solid fa-copy');
+            const shareTitle = `${m.name}-এর জুম্মার তাবাররুক`;
+            const shareText = `আজ জুম্মার নামাজে ${m.name}-এ তাবাররুক হিসেবে দেওয়া হচ্ছে "${m.foodName}" (${m.time})। বিস্তারিত জানতে ও আপনার এলাকার আপডেট পেতে Vector অ্যাপ ভিজিট করুন!`;
+            const shareUrl = window.location.href;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+                    showToast('সফলভাবে শেয়ার করা হয়েছে!', 'fa-solid fa-circle-check');
+                    return;
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    console.error('Unable to share tabaruk details:', error);
+                }
+            }
+
+            const textToCopy = `${shareText}\n${shareUrl}`;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
+                    const fallbackInput = document.createElement('textarea');
+                    fallbackInput.value = textToCopy;
+                    fallbackInput.setAttribute('readonly', '');
+                    fallbackInput.style.position = 'fixed';
+                    fallbackInput.style.opacity = '0';
+                    document.body.appendChild(fallbackInput);
+                    let copied = false;
+                    try {
+                        fallbackInput.select();
+                        copied = document.execCommand('copy');
+                    } finally {
+                        fallbackInput.remove();
+                    }
+                    if (!copied) throw new Error('Clipboard copy was rejected by the browser.');
+                }
+                showToast('মেসেজটি কপি করা হয়েছে! মেসেঞ্জারে পেস্ট করে পাঠিয়ে দিন।', 'fa-solid fa-copy');
+            } catch (error) {
+                console.error('Unable to copy tabaruk details:', error);
+                showToast('শেয়ার বা কপি করা যায়নি। ব্রাউজারের অনুমতি পরীক্ষা করে আবার চেষ্টা করুন।', 'fa-solid fa-triangle-exclamation');
+            }
         }
 
         // Location Modal Open / Close
@@ -1961,6 +2230,20 @@
             'Notification' in window && Notification.permission === 'granted') {
             document.getElementById('notifIcon').className = 'fa-solid fa-bell text-xs text-amber-300';
         }
+
+        function updateNetworkStatus() {
+            const banner = document.getElementById('offlineNotice');
+            if (!banner) return;
+            banner.classList.toggle('hidden', navigator.onLine);
+        }
+
+        window.addEventListener('online', () => {
+            updateNetworkStatus();
+            showToast('ইন্টারনেট সংযোগ ফিরে এসেছে', 'fa-solid fa-wifi');
+            loadMosquesData(true);
+        });
+        window.addEventListener('offline', updateNetworkStatus);
+        updateNetworkStatus();
     </script>
 </body>
 </html>
