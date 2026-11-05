@@ -1,5 +1,6 @@
-const CACHE_NAME = 'vector-shell-v1';
+const CACHE_NAME = 'vector-shell-v2';
 const APP_SHELL = [
+    './',
     './index.html',
     './manifest.json',
     './icons/vector.svg',
@@ -37,8 +38,9 @@ self.addEventListener('fetch', event => {
                     if (response.ok) {
                         const copy = response.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+                        return response;
                     }
-                    return response;
+                    return caches.match('./index.html').then(cached => cached || response);
                 })
                 .catch(async () => (await caches.match(event.request)) ||
                     (await caches.match('./index.html')))
